@@ -50,13 +50,20 @@ async function run(): Promise<void> {
     core.setOutput('cache-hit', String(cacheHit))
 
     if (cacheHit === true) {
+      const targetName = path.split('/').slice(-1)[0]
+      const symlinkPath = `./${path}`
       const ln = await exec(
-        `ln -s ${p.join(cachePath, path.split('/').slice(-1)[0])} ./${path}`
+        `ln -s ${p.join(cachePath, targetName)} ${symlinkPath}`
       )
-
+    
       core.debug(ln.stdout)
-      if (ln.stderr) core.error(ln.stderr)
-      if (!ln.stderr) core.info(`Cache restored with key ${key}`)
+      if (ln.stderr) {
+        core.error(ln.stderr)
+      } else {
+        // Touch symlink to update atime
+        await exec(`touch -a ${symlinkPath}`)
+        core.info(`Cache restored with key ${key} (atime updated)`)
+      }
     } else {
       core.info(`Cache not found for ${key}`)
     }
